@@ -1,34 +1,30 @@
 import pandas as pd
 
+
 class PowerSignalsFixer:
     def __init__(self):
-        self.mapping = {
-            "A+":"R-",
-            "A-":"A-",
-            "R+":"A+",
-            "R-":"R+",
-        }
+        pass
 
-        self.inverse_mapping = {
-            "R-":"A+",
-            "A-":"A-",
-            "A+":"R+",
-            "R+":"R-",
-        }
-    
-    def fix_colums(self, df):
+    def fix_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+
         df = df.copy()
 
-        ddf = df.rename(columns={
-            "A+":"A+_raw",
-            "A-":"A-_raw",
-            "R+":"R+_raw",
-            "R-":"R-_raw",
-        })
+        expected_cols = ["A+", "A-", "R+", "R-"]
 
-        df["A+"] = ddf["A+_raw"]
-        df["A-"] = ddf["A-_raw"]
-        df["R+"] = ddf["R+_raw"]
-        df["R-"] = ddf["R-_raw"]
+        for col in expected_cols:
+            if col not in df.columns:
+                raise ValueError(f"Missing column: {col}")
 
-        return df[['meter_id', 'timestamp', 'A+', 'A-', 'R+', 'R-']]
+
+        a_plus_raw = df["A+"].copy()
+        a_minus_raw = df["A-"].copy()
+        r_plus_raw = df["R+"].copy()
+        r_minus_raw = df["R-"].copy()
+
+        df["A+"] = r_plus_raw
+        df["A-"] = a_minus_raw
+        df["R+"] = a_plus_raw
+        df["R-"] = r_minus_raw
+
+    
+        return df[["meter_id", "timestamp", "A+", "A-", "R+", "R-"]]
