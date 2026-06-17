@@ -13,6 +13,12 @@ from src.visualizer import AnomalyVisualizer
 from src.anomaly_embedding import AnomalyUMAP
 from src.risk_scorer import RiskScorer
 from src.anomaly_analizer import AnomalyAnalyzer
+from src.anomaly_clustering import AnomalyTypeClassifier
+from src.anomaly_cluster_visualizer import AnomalyTypeVisualizer
+from src.windowed_anomaly_features import PeriodFeatureExtractor
+from src.transition_risk_model import TransitionRiskModel
+from src.transition_risk_visualizer import TransitionRiskVisualizer
+
 
 
 def main():
@@ -171,9 +177,85 @@ def main():
             meter_profiles_df=profiles,
             target_meter_id=row["meter_id"],
             consumer_class=row["consumer_class"])
+    
+    # =====================================================
+    # ANOMALY TYPE CLUSTERING
+    # =====================================================
+
+    print("\n========== STEP 13: ANOMALY TYPE CLUSTERING ==========")
+
+    type_classifier = AnomalyTypeClassifier(n_clusters=4, random_state=42)
+
+    clustered_anomalies, cluster_means = type_classifier.fit_predict(
+        risk_report=risk_report,
+        anomaly_features_df=anomaly_features,
+        meter_profiles_df=profiles)
+
+    if not clustered_anomalies.empty:
+        print("\nРаспределение аномалий по типам:")
+        print(clustered_anomalies["anomaly_type"].value_counts())
+        print("\nСредние z-score признаков по кластерам (для интерпретации):")
+        print(cluster_means)
+        clustered_anomalies.to_csv(
+            "data/processed/anomaly_types.csv",
+            index=False)
+
+        anomaly_type_map = clustered_anomalies.set_index("meter_id")["anomaly_type"]
+        risk_report_with_types = risk_report.copy()
+        risk_report_with_types["meter_id"] = risk_report_with_types["meter_id"].astype(str).str.strip()
+        risk_report_with_types["anomaly_type"] = risk_report_with_types["meter_id"].map(anomaly_type_map)
+        risk_report_with_types["anomaly_type"] = risk_report_with_types["anomaly_type"].fillna("Норма")
+        risk_report_with_types.to_csv("data/processed/final_risk_report_with_types.csv", index=False)
+
+        print("Сохранено: data/processed/anomaly_types.csv")
+        print("Сохранено: data/processed/final_risk_report_with_types.csv")
+        type_visualizer = AnomalyTypeVisualizer(output_dir="image")
+        type_visualizer.plot_pca_scatter(clustered_anomalies)
+        type_visualizer.plot_feature_distributions(clustered_anomalies)
+    else:
+        print("Аномалии не найдены (anomaly == -1 отсутствуют) — кластеризация типов пропущена.")
+
+    # =====================================================
+    # TRANSITION RISK MODEL (норма -> аномалия)
+    # =====================================================
+    print("\n========== STEP 14: TRANSITION RISK MODEL ==========")
+    period_extractor = PeriodFeatureExtractor(n_periods=2, min_measurements=10)
+    period_features = period_extractor.extract(df)
+    print("Period features shape:", period_features.shape)
+    print("Periods per meter:")
+    print(period_features.groupby("meter_id")["period_idx"].count().describe())
+    period_features.to_csv("data/processed/period_features.csv", index=False)
+
+    transition_model = TransitionRiskModel(contamination=0.05, random_state=42)
+    print("\nРазметка периодов через Isolation Forest:")
+    labeled_periods = transition_model.label_periods(period_features)
+
+    print("\nПостроение датасета переходов (period_0 -> label period_1):")
+    X_trans, y_trans, meta_trans = transition_model.build_transition_dataset(labeled_periods)
+
+    if y_trans.nunique() < 2 or len(X_trans) < 20:
+        print("Недостаточно данных/классов для обучения — попробуй увеличить contamination.")
+    else:
+        print("\nОбучение классификатора переходов:")
+        results = transition_model.train(X_trans, y_trans, meta_trans, test_size=0.25)
+        print("\n===== TRANSITION RISK: CLASSIFICATION REPORT =====")
+        print(results["report"])
+        print(f"ROC-AUC: {results['roc_auc']:.4f}")
+
+        transition_visualizer = TransitionRiskVisualizer(output_dir="image")
+        transition_visualizer.plot_roc_curve(results["y_test"], results["y_proba"])
+
+        transition_visualizer.plot_feature_importance(transition_model.classifier, TransitionRiskModel.FEATURE_COLUMNS)
+        current_risk = transition_model.predict_risk(period_features)
+        current_risk.to_csv("data/processed/transition_risk_current.csv", index=False)
+
+        print("\nТоп-10 счётчиков по вероятности перехода в аномалию:")
+        print(current_risk.head(10))
+        transition_visualizer.plot_risk_distribution(current_risk)
+        print("\nСохранено: data/processed/period_features.csv")
+        print("Сохранено: data/processed/transition_risk_current.csv")
 
     print("\nPipeline finished successfully!")
-
 
 if __name__ == "__main__":
     main()

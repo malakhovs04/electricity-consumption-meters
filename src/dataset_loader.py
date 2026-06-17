@@ -27,6 +27,9 @@ class DatasetLoader:
                 "reactive_plus": "R+",
                 "reactive_minus": "R-",
             })
+            
+            if pd.api.types.is_numeric_dtype(df["timestamp"]):
+                df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
 
             df = self.cleaner.fix_columns(df)
             df["consumer_class"] = file.stem
