@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+
+  # Сервис 1: ML-пайплайн (main.py)
+  # Запуск: docker compose run --rm pipeline
+  pipeline:
+    build: .
+    command: python main.py
+    volumes:
+      - ./data:/app/data
+      - ./image:/app/image
+      - ./reports:/app/reports
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  # Сервис 2: FastAPI веб-приложение
+  # Запуск: docker compose up web
+  web:
+    build: .
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./image:/app/image
+      - ./templates:/app/templates
+      - ./static:/app/static
+    environment:
+      - PYTHONUNBUFFERED=1

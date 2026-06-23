@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% block title %}Счётчик {{ info.meter_id }}{% endblock %}
+
+{% block content %}
+
+<a href="{{ back_url }}" class="btn btn-secondary back-btn">← Назад {{ back_label }}</a>
+
+<!-- Заголовок -->
+<div class="meter-header card">
+    <div class="meter-header-left">
+        <h1 class="mono">{{ info.meter_id }}</h1>
+        <div class="meter-meta">
+            <span class="meta-tag">{{ info.consumer_class }}</span>
+            {% if info.anomaly == -1 %}
+                <span class="badge-pill danger">Аномалия</span>
+            {% else %}
+                <span class="badge-pill success">Норма</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="meter-risk-badge {{ info.color }}">
+        <div class="risk-score-big">{{ info.risk_score }}</div>
+        <div class="risk-label">
+            Risk Score
+            <span class="tooltip-icon" tabindex="0">?
+                <span class="tooltip-box">
+                    Интегральная оценка риска от 0 до 100. Складывается из
+                    четырёх компонентов: степень аномальности профиля по
+                    Isolation Forest (40%), нестабильность потребления —
+                    коэффициент вариации CV (20%), доля ночного потребления
+                    относительно дневного (20%) и наличие длительных
+                    разрывов в передаче данных (20%).<br><br>
+                    <b>0–40</b> — низкий риск, потребление в норме.<br>
+                    <b>40–70</b> — средний риск, есть отклонения.<br>
+                    <b>70–100</b> — высокий риск, рекомендуется проверка.
+                </span>
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Ключевые метрики -->
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="stat-value mono small">{{ info.anomaly_score }}</div>
+        <div class="stat-label">
+            Anomaly Score (IF)
+            <span class="tooltip-icon" tabindex="0">?
+                <span class="tooltip-box">
+                    Внутренний скор модели Isolation Forest. Значения
+                    ближе к <b>−1</b> — счётчик сильно выделяется среди
+                    остальных (аномалия). Значения ближе к <b>0</b> —
+                    счётчик похож на большинство других (норма).
+                </span>
+            </span>
+        </div>
+    </div>
+    {% if transition %}
+    <div class="stat-card {% if transition.proba >= 70 %}danger{% elif transition.proba >= 40 %}warning{% else %}success{% endif %}">
+        <div class="stat-value">{{ transition.proba }}%</div>
+        <div class="stat-label">
+            Вероятность перехода в аномалию
+            <span class="tooltip-icon" tabindex="0">?
+                <span class="tooltip-box">
+                    Предсказание модели, обученной отличать счётчики, чей
+                    профиль в первой половине периода наблюдений предвещает
+                    аномалию во второй половине. Показывается только для
+                    счётчиков, которые сейчас в норме.
+                </span>
+            </span>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Диагностика -->
+<div class="card">
+    <h3>Диагностика</h3>
+    <div class="diagnosis-grid">
+        <div class="diagnosis-item">
+            <div class="diagnosis-label">Тип аномалии</div>
+            <div class="diagnosis-value">{{ info.anomaly_type }}</div>
+        </div>
+        <div class="diagnosis-item">
+            <div class="diagnosis-label">Главная причина риска</div>
+            <div class="diagnosis-value">{{ info.primary_reason }}</div>
+        </div>
+        {% if transition %}
+        <div class="diagnosis-item">
+            <div class="diagnosis-label">Период наблюдения (первая половина)</div>
+            <div class="diagnosis-value">{{ transition.period_start }} — {{ transition.period_end }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if has_raw_data %}
+
+<!-- Блок 1: Потребление во времени -->
+<div class="card">
+    <div class="card-header">
+        <h3>
+            Потребление во времени
+            <span class="tooltip-icon" tabindex="0">?
+                <span class="tooltip-box">
+                    Выберите вид энергии и период. Масштаб графика
+                    подбирается автоматически в зависимости от длины
+                    периода. "Другое" открывает календарь для выбора
+                    произвольного диапазона дат, включая один день.
+                </span>
+            </span>
+        </h3>
+    </div>
+
+    <div class="chart-filters">
+        <div class="filter-group">
+            <label>Энергия</label>
+            <select id="ts-energy-select" class="filter-select">
+                {% for e in energy_options %}
+                <option value="{{ e }}">{{ e }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Период</label>
+            <select id="ts-period-select" class="filter-select">
+                <option value="all" selected>Весь период</option>
+                <option value="last_month">Последний месяц</option>
+                <option value="last_week">Последняя неделя</option>
+                <option value="first_month">Первый месяц</option>
+                <option value="first_week">Первая неделя</option>
+                <option value="custom">Другое (выбрать даты)</option>
+            </select>
+        </div>
+        <div class="filter-group" id="ts-date-from-group" style="display:none;">
+            <label>С даты</label>
+            <input type="date" id="ts-date-from" class="filter-input"
+                   {% if date_bounds %}min="{{ date_bounds.min_date }}" max="{{ date_bounds.max_date }}"{% endif %}>
+        </div>
+        <div class="filter-group" id="ts-date-to-group" style="display:none;">
+            <label>По дату</label>
+            <input type="date" id="ts-date-to" class="filter-input"
+                   {% if date_bounds %}min="{{ date_bounds.min_date }}" max="{{ date_bounds.max_date }}"{% endif %}>
+        </div>
+    </div>
+
+    {% if date_bounds %}
+    <div class="filter-hint">
+        Доступный диапазон данных: {{ date_bounds.min_date }} — {{ date_bounds.max_date }}.
+        Чтобы посмотреть один день, укажите одинаковую дату в обоих полях.
+    </div>
+    {% endif %}
+
+    <div id="timeseries-chart">
+        {% if timeseries_chart %}
+        <script>
+            (function() {
+                var fig = {{ timeseries_chart | safe }};
+                Plotly.newPlot('timeseries-chart', fig.data, fig.layout, {responsive: true});
+            })();
+        </script>
+        {% else %}
+        <p class="empty-state">Нет сырых данных для этого счётчика.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Блок 2: Потребление по дням недели -->
+<div class="card">
+    <div class="card-header">
+        <h3>
+            Потребление по дням недели
+            <span class="tooltip-icon" tabindex="0">?
+                <span class="tooltip-box">
+                    Среднее потребление по каждому дню недели за выбранный
+                    период. Использует свои фильтры энергии и периода.
+                </span>
+            </span>
+        </h3>
+    </div>
+
+    <div class="chart-filters">
+        <div class="filter-group">
+            <label>Энергия</label>
+            <select id="wd-energy-select" class="filter-select">
+                {% for e in energy_options %}
+                <option value="{{ e }}">{{ e }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Период</label>
+            <select id="wd-period-select" class="filter-select">
+                <option value="all" selected>Весь период</option>
+                <option value="last_month">Последний месяц</option>
+                <option value="last_week">Последняя неделя</option>
+                <option value="first_month">Первый месяц</option>
+                <option value="first_week">Первая неделя</option>
+                <option value="custom">Другое (выбрать даты)</option>
+            </select>
+        </div>
+        <div class="filter-group" id="wd-date-from-group" style="display:none;">
+            <label>С даты</label>
+            <input type="date" id="wd-date-from" class="filter-input"
+                   {% if date_bounds %}min="{{ date_bounds.min_date }}" max="{{ date_bounds.max_date }}"{% endif %}>
+        </div>
+        <div class="filter-group" id="wd-date-to-group" style="display:none;">
+            <label>По дату</label>
+            <input type="date" id="wd-date-to" class="filter-input"
+                   {% if date_bounds %}min="{{ date_bounds.min_date }}" max="{{ date_bounds.max_date }}"{% endif %}>
+        </div>
+    </div>
+
+    <div id="weekday-chart">
+        {% if weekday_chart %}
+        <script>
+            (function() {
+                var fig = {{ weekday_chart | safe }};
+                Plotly.newPlot('weekday-chart', fig.data, fig.layout, {responsive: true});
+            })();
+        </script>
+        {% else %}
+        <p class="empty-state">Нет сырых данных для этого счётчика.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+(function() {
+    var meterId = encodeURIComponent("{{ info.meter_id }}");
+
+    function showLoading(containerId) {
+        document.getElementById(containerId).innerHTML = '<p class="empty-state">Загрузка...</p>';
+    }
+    function showError(containerId) {
+        document.getElementById(containerId).innerHTML = '<p class="empty-state">Нет данных за этот период.</p>';
+    }
+    function renderChart(containerId, fig) {
+        var container = document.getElementById(containerId);
+        container.innerHTML = '';
+        Plotly.newPlot(containerId, fig.data, fig.layout, {responsive: true});
+    }
+
+    function setupBlock(prefix, apiPath, chartContainerId) {
+        var energySelect  = document.getElementById(prefix + '-energy-select');
+        var periodSelect  = document.getElementById(prefix + '-period-select');
+        var dateFromGroup = document.getElementById(prefix + '-date-from-group');
+        var dateToGroup   = document.getElementById(prefix + '-date-to-group');
+        var dateFromInput = document.getElementById(prefix + '-date-from');
+        var dateToInput   = document.getElementById(prefix + '-date-to');
+
+        function toggleDateInputs() {
+            var isCustom = periodSelect.value === 'custom';
+            dateFromGroup.style.display = isCustom ? '' : 'none';
+            dateToGroup.style.display = isCustom ? '' : 'none';
+        }
+
+        function load() {
+            if (periodSelect.value === 'custom' && (!dateFromInput.value || !dateToInput.value)) {
+                return;
+            }
+
+            showLoading(chartContainerId);
+
+            var params = new URLSearchParams();
+            params.set('energy', energySelect.value);
+            params.set('period', periodSelect.value);
+            if (periodSelect.value === 'custom') {
+                params.set('date_from', dateFromInput.value);
+                params.set('date_to', dateToInput.value);
+            }
+
+            fetch(apiPath + '?' + params.toString())
+                .then(function(resp) {
+                    if (!resp.ok) { throw new Error('no data'); }
+                    return resp.json();
+                })
+                .then(function(fig) { renderChart(chartContainerId, fig); })
+                .catch(function() { showError(chartContainerId); });
+        }
+
+        energySelect.addEventListener('change', load);
+        periodSelect.addEventListener('change', function() {
+            toggleDateInputs();
+            load();
+        });
+        dateFromInput.addEventListener('change', load);
+        dateToInput.addEventListener('change', load);
+
+        toggleDateInputs();
+    }
+
+    setupBlock('ts', '/api/meter/' + meterId + '/timeseries', 'timeseries-chart');
+    setupBlock('wd', '/api/meter/' + meterId + '/weekday-stats', 'weekday-chart');
+})();
+</script>
+
+{% else %}
+<div class="card">
+    <p class="empty-state">Сырые данные (data/raw/) не найдены — детальные графики недоступны.</p>
+</div>
+{% endif %}
+
+{% endblock %}

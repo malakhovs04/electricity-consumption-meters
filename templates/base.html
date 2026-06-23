@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Electricity Monitor{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-brand">⚡ Electricity Monitor</div>
+    <div class="nav-links">
+        <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">
+            Обзор счётчиков
+        </a>
+        <a href="/risk" class="nav-link {% if request.url.path == '/risk' %}active{% endif %}">
+            Карта рисков
+        </a>
+    </div>
+</nav>
+
+<main class="main-content">
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+    <span>Electricity Consumption Monitor — ИТМО Portfolio Project</span>
+</footer>
+
+</body>
+</html>

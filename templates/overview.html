@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Обзор счётчиков{% endblock %}
+
+{% block content %}
+
+<!-- Сводная статистика -->
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="stat-value">{{ total_meters }}</div>
+        <div class="stat-label">Всего счётчиков</div>
+    </div>
+    <div class="stat-card danger">
+        <div class="stat-value">{{ n_anomalies }}</div>
+        <div class="stat-label">
+            Аномалий
+            <span class="tooltip-icon" tabindex="0">?
+                <span class="tooltip-box">
+                    Счётчики, которые модель Isolation Forest пометила как
+                    выделяющиеся по форме профиля потребления среди всей
+                    выборки.
+                </span>
+            </span>
+        </div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-value">{{ high_risk }}</div>
+        <div class="stat-label">
+            Высокий риск (≥70)
+            <span class="tooltip-icon" tabindex="0">?
+                <span class="tooltip-box">
+                    Счётчики с Risk Score от 70 до 100 — комбинация
+                    аномальности профиля, нестабильности потребления,
+                    ночной активности и разрывов в данных указывает на
+                    необходимость проверки в первую очередь.
+                </span>
+            </span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ avg_risk }}</div>
+        <div class="stat-label">
+            Средний Risk Score
+            <span class="tooltip-icon" tabindex="0">?
+                <span class="tooltip-box">
+                    Risk Score — интегральная оценка риска от 0 до 100 для
+                    каждого счётчика, объединяющая аномальность профиля
+                    (40%), нестабильность потребления (20%), долю ночной
+                    активности (20%) и разрывы в данных (20%). Здесь
+                    показано среднее значение по всем счётчикам — общий
+                    "температурный" показатель состояния сети.
+                </span>
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Фильтры -->
+<div class="card filters-card">
+    <form method="get" action="/" class="filters-form">
+        <input type="hidden" name="sort_by" value="{{ sort_by }}">
+        <input type="hidden" name="sort_dir" value="{{ sort_dir }}">
+        <div class="filter-group">
+            <label>Класс потребителя</label>
+            <select name="consumer_class">
+                <option value="">Все</option>
+                {% for cls in classes %}
+                <option value="{{ cls }}" {% if cls == consumer_class %}selected{% endif %}>
+                    {{ cls }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Risk Score от</label>
+            <input type="number" name="risk_min" value="{{ risk_min }}" min="0" max="100" step="1">
+        </div>
+        <div class="filter-group">
+            <label>до</label>
+            <input type="number" name="risk_max" value="{{ risk_max }}" min="0" max="100" step="1">
+        </div>
+        <div class="filter-group checkbox-group">
+            <label>
+                <input type="checkbox" name="only_anomalies" value="true"
+                    {% if only_anomalies %}checked{% endif %}>
+                Только аномалии
+            </label>
+        </div>
+        <button type="submit" class="btn btn-primary">Применить</button>
+        <a href="/" class="btn btn-secondary">Сбросить</a>
+    </form>
+</div>
+
+<!-- Таблица -->
+<div class="card">
+    <div class="card-header">
+        <h2>Счётчики <span class="badge">{{ total }}</span></h2>
+        <span class="page-info">Страница {{ page }} / {{ total_pages }}</span>
+    </div>
+
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Meter ID</th>
+                    <th>Класс</th>
+                    <th class="sortable">
+                        <a href="?consumer_class={{ consumer_class }}&risk_min={{ risk_min }}&risk_max={{ risk_max }}&only_anomalies={{ only_anomalies }}&sort_by=risk_score&sort_dir={% if sort_by == 'risk_score' and sort_dir == 'desc' %}asc{% else %}desc{% endif %}">
+                            Risk Score
+                            {% if sort_by == 'risk_score' %}{% if sort_dir == 'desc' %}↓{% else %}↑{% endif %}{% endif %}
+                        </a>
+                    </th>
+                    <th class="sortable">
+                        <a href="?consumer_class={{ consumer_class }}&risk_min={{ risk_min }}&risk_max={{ risk_max }}&only_anomalies={{ only_anomalies }}&sort_by=anomaly_score&sort_dir={% if sort_by == 'anomaly_score' and sort_dir == 'desc' %}asc{% else %}desc{% endif %}">
+                            Anomaly Score
+                            {% if sort_by == 'anomaly_score' %}{% if sort_dir == 'desc' %}↓{% else %}↑{% endif %}{% endif %}
+                        </a>
+                    </th>
+                    <th>Статус</th>
+                    <th>Тип аномалии</th>
+                    <th>Главная причина</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr class="{% if row.anomaly == -1 %}row-anomaly{% endif %}">
+                    <td class="mono">{{ row.meter_id }}</td>
+                    <td>{{ row.consumer_class }}</td>
+                    <td>
+                        <div class="risk-bar-wrap">
+                            <div class="risk-bar {{ row.color }}"
+                                 style="width: {{ row.risk_score }}%"></div>
+                            <span>{{ row.risk_score }}</span>
+                        </div>
+                    </td>
+                    <td class="mono small-text">{{ row.anomaly_score }}</td>
+                    <td>
+                        {% if row.anomaly == -1 %}
+                            <span class="badge-pill danger">Аномалия</span>
+                        {% else %}
+                            <span class="badge-pill success">Норма</span>
+                        {% endif %}
+                    </td>
+                    <td class="small-text">{{ row.anomaly_type }}</td>
+                    <td class="small-text">{{ row.primary_reason }}</td>
+                    <td>
+                        <a href="/meter/{{ row.meter_id }}?source=overview" class="btn btn-sm">Детали</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Пагинация -->
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="?page={{ page - 1 }}&consumer_class={{ consumer_class }}&risk_min={{ risk_min }}&risk_max={{ risk_max }}&only_anomalies={{ only_anomalies }}&sort_by={{ sort_by }}&sort_dir={{ sort_dir }}"
+           class="btn btn-secondary">← Назад</a>
+        {% endif %}
+        <span>{{ page }} / {{ total_pages }}</span>
+        {% if page < total_pages %}
+        <a href="?page={{ page + 1 }}&consumer_class={{ consumer_class }}&risk_min={{ risk_min }}&risk_max={{ risk_max }}&only_anomalies={{ only_anomalies }}&sort_by={{ sort_by }}&sort_dir={{ sort_dir }}"
+           class="btn btn-secondary">Вперёд →</a>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

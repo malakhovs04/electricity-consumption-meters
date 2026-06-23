@@ -1,0 +1,513 @@
+/* ============================================================
+   Base
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f0f2f5;
+    color: #1a1d23;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ============================================================
+   Navbar
+   ============================================================ */
+.navbar {
+    background: #1a1d23;
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+
+.nav-brand {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #4F8EF7;
+    letter-spacing: .02em;
+}
+
+.nav-links { display: flex; gap: 0.5rem; }
+
+.nav-link {
+    color: #9ca3af;
+    text-decoration: none;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: all .15s;
+}
+
+.nav-link:hover { background: #2d3340; color: #fff; }
+.nav-link.active { background: #4F8EF7; color: #fff; }
+
+/* ============================================================
+   Main layout
+   ============================================================ */
+.main-content {
+    flex: 1;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1.5rem 1.5rem 3rem;
+}
+
+h1 { font-size: 1.6rem; margin-bottom: 1.25rem; color: #1a1d23; }
+h2 { font-size: 1.2rem; margin-bottom: 0.75rem; }
+h3 { font-size: 1rem; margin-bottom: 0.75rem; color: #374151; }
+
+/* ============================================================
+   Cards
+   ============================================================ */
+.card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.page-info { font-size: 0.85rem; color: #6b7280; }
+
+.filter-select {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.85rem;
+    background: #fff;
+    height: 36px;
+    cursor: pointer;
+}
+
+.empty-state {
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.9rem;
+    padding: 2rem 0;
+}
+
+/* ============================================================
+   Chart filters (date range, energy, period selectors)
+   ============================================================ */
+.chart-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 0.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.filter-input {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.85rem;
+    background: #fff;
+    height: 36px;
+}
+
+.filter-hint {
+    font-size: 0.78rem;
+    color: #9ca3af;
+    margin-bottom: 1rem;
+}
+
+.two-col-charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+    .two-col-charts { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   Stats row
+   ============================================================ */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.stat-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 1.1rem 1.25rem;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    border-top: 3px solid #4F8EF7;
+}
+
+.stat-card.danger  { border-top-color: #dc3545; }
+.stat-card.warning { border-top-color: #fd7e14; }
+.stat-card.success { border-top-color: #28a745; }
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a1d23;
+    line-height: 1.1;
+}
+
+.stat-value.small { font-size: 1.1rem; margin-top: .3rem; }
+.stat-label { font-size: 0.78rem; color: #6b7280; margin-top: 0.3rem; display: inline-flex; align-items: center; gap: 0.3rem; }
+
+/* ============================================================
+   Tooltip
+   ============================================================ */
+.tooltip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #d1d5db;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    cursor: help;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.tooltip-icon:hover,
+.tooltip-icon:focus {
+    background: #4F8EF7;
+    outline: none;
+}
+
+.tooltip-box {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 260px;
+    background: #1a1d23;
+    color: #e5e7eb;
+    padding: 0.75rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: left;
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    white-space: normal;
+}
+
+.tooltip-box::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1a1d23;
+}
+
+.tooltip-icon:hover .tooltip-box,
+.tooltip-icon:focus .tooltip-box {
+    display: block;
+}
+
+h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* ============================================================
+   Filters
+   ============================================================ */
+.filters-card { padding: 1rem 1.5rem; }
+
+.filters-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.filter-group label { font-size: 0.8rem; color: #6b7280; font-weight: 500; }
+
+.filter-group select,
+.filter-group input[type="number"] {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.9rem;
+    background: #fff;
+    height: 36px;
+}
+
+.checkbox-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.checkbox-group label {
+    font-size: 0.9rem;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: opacity .15s;
+    height: 36px;
+}
+
+.btn:hover { opacity: .85; }
+
+.btn-primary   { background: #4F8EF7; color: #fff; }
+.btn-secondary { background: #e5e7eb; color: #374151; }
+.btn-sm        { padding: 0.25rem 0.7rem; font-size: 0.8rem; height: 28px; background: #e5e7eb; color: #374151; }
+
+.back-btn { margin-bottom: 1rem; }
+
+/* ============================================================
+   Table
+   ============================================================ */
+.table-wrap { overflow-x: auto; }
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.data-table th {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    background: #f9fafb;
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+}
+
+.data-table td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: #f9fafb; }
+
+.row-anomaly td { background: #fff5f5; }
+.row-anomaly:hover td { background: #ffe9e9; }
+
+.data-table th.sortable a {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.data-table th.sortable a:hover { color: #4F8EF7; }
+
+.mono { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.8rem; }
+.small-text { font-size: 0.78rem; color: #6b7280; max-width: 260px; }
+
+/* ============================================================
+   Risk bar
+   ============================================================ */
+.risk-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 120px;
+}
+
+.risk-bar {
+    height: 6px;
+    border-radius: 3px;
+    min-width: 2px;
+    flex-shrink: 0;
+    max-width: 80px;
+}
+
+.risk-bar.success { background: #28a745; }
+.risk-bar.warning { background: #fd7e14; }
+.risk-bar.danger  { background: #dc3545; }
+
+/* ============================================================
+   Badges
+   ============================================================ */
+.badge {
+    background: #e5e7eb;
+    color: #374151;
+    border-radius: 20px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.badge-pill {
+    display: inline-block;
+    border-radius: 20px;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-pill.success { background: #d1fae5; color: #065f46; }
+.badge-pill.warning { background: #fef3c7; color: #92400e; }
+.badge-pill.danger  { background: #fee2e2; color: #991b1b; }
+
+/* ============================================================
+   Pagination
+   ============================================================ */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding-top: 1rem;
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+/* ============================================================
+   Meter detail
+   ============================================================ */
+.meter-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.meter-header-left h1 { margin-bottom: 0.5rem; font-size: 1.2rem; }
+.meter-meta { display: flex; gap: 0.5rem; align-items: center; }
+
+.meta-tag {
+    background: #e5e7eb;
+    border-radius: 6px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.8rem;
+    color: #374151;
+}
+
+.meter-risk-badge {
+    border-radius: 10px;
+    padding: 0.75rem 1.5rem;
+    text-align: center;
+    min-width: 120px;
+}
+
+.meter-risk-badge.success { background: #d1fae5; }
+.meter-risk-badge.warning { background: #fef3c7; }
+.meter-risk-badge.danger  { background: #fee2e2; }
+
+.risk-score-big {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.meter-risk-badge.success .risk-score-big { color: #065f46; }
+.meter-risk-badge.warning .risk-score-big { color: #92400e; }
+.meter-risk-badge.danger  .risk-score-big { color: #991b1b; }
+
+.risk-label { font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem; }
+
+.diagnosis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.diagnosis-item { padding: 0.75rem; background: #f9fafb; border-radius: 8px; }
+.diagnosis-label { font-size: 0.75rem; color: #6b7280; margin-bottom: 0.3rem; font-weight: 500; }
+.diagnosis-value { font-size: 0.9rem; color: #1a1d23; }
+
+/* ============================================================
+   Charts grid
+   ============================================================ */
+.charts-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.charts-grid .card,
+.card {
+    overflow: hidden;
+    min-width: 0;
+}
+
+.charts-grid .card > div,
+.card > div[id$="-chart"] {
+    width: 100%;
+    max-width: 100%;
+}
+
+.js-plotly-plot,
+.plot-container {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* ============================================================
+   Footer
+   ============================================================ */
+.footer {
+    text-align: center;
+    padding: 1rem;
+    font-size: 0.78rem;
+    color: #9ca3af;
+    border-top: 1px solid #e5e7eb;
+    background: #fff;
+}

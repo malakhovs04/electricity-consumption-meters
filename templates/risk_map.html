@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Карта рисков{% endblock %}
+
+{% block content %}
+
+<h1>Карта рисков</h1>
+
+<!-- Графики -->
+<div class="charts-grid">
+    {% if scatter_chart %}
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                Risk Score vs Anomaly Score
+                <span class="tooltip-icon" tabindex="0">?
+                    <span class="tooltip-box">
+                        Каждая точка — счётчик. По оси X — внутренний скор
+                        Isolation Forest (чем левее, тем аномальнее по
+                        мнению модели). По оси Y — итоговый Risk Score.
+                        В норме оба показателя растут вместе; расхождения
+                        говорят о том, что Risk Score "видит" что-то, что
+                        Isolation Forest не считает критичным (или наоборот).
+                    </span>
+                </span>
+            </h3>
+        </div>
+        <div id="scatter-chart"></div>
+        <script>
+            (function() {
+                var fig = {{ scatter_chart | safe }};
+                Plotly.newPlot('scatter-chart', fig.data, fig.layout, {responsive: true});
+            })();
+        </script>
+    </div>
+    {% else %}
+    <div class="card">
+        <p class="empty-state">Недостаточно данных для графика Risk Score vs Anomaly Score.</p>
+    </div>
+    {% endif %}
+
+    {% if class_chart %}
+    <div class="card">
+        <div id="class-chart"></div>
+        <script>
+            (function() {
+                var fig = {{ class_chart | safe }};
+                Plotly.newPlot('class-chart', fig.data, fig.layout, {responsive: true});
+            })();
+        </script>
+    </div>
+    {% else %}
+    <div class="card">
+        <p class="empty-state">Недостаточно данных для графика по классам потребителей.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>
+            Вероятность перехода в аномалию (следующий период)
+            <span class="tooltip-icon" tabindex="0">?
+                <span class="tooltip-box">
+                    Распределение построено только по счётчикам, которые
+                    СЕЙЧАС в норме — для них модель оценивает вероятность
+                    того, что вторая половина периода наблюдений окажется
+                    аномальной. Для уже аномальных счётчиков такая оценка
+                    не строится: она считалась бы на основе данных, в
+                    которых аномалия уже произошла, и не имела бы смысла.
+                </span>
+            </span>
+        </h3>
+    </div>
+    {% if transition_chart %}
+    <div id="transition-chart"></div>
+    <script>
+        (function() {
+            var fig = {{ transition_chart | safe }};
+            Plotly.newPlot('transition-chart', fig.data, fig.layout, {responsive: true});
+        })();
+    </script>
+    {% else %}
+    <p class="empty-state">Нет данных модели переходов (запусти STEP 14 в main.py).</p>
+    {% endif %}
+</div>
+
+<!-- Топ аномалий -->
+<div class="card">
+    <h2>Топ-30 аномальных счётчиков</h2>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Meter ID</th>
+                    <th>Класс</th>
+                    <th>Risk Score</th>
+                    <th>Тип аномалии</th>
+                    <th>Причина</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in top_rows %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td class="mono">{{ row.meter_id }}</td>
+                    <td>{{ row.consumer_class }}</td>
+                    <td>
+                        <div class="risk-bar-wrap">
+                            <div class="risk-bar {{ row.color }}"
+                                 style="width: {{ row.risk_score }}%"></div>
+                            <span>{{ row.risk_score }}</span>
+                        </div>
+                    </td>
+                    <td class="small-text">{{ row.anomaly_type }}</td>
+                    <td class="small-text">{{ row.primary_reason }}</td>
+                    <td>
+                        <a href="/meter/{{ row.meter_id }}?source=risk" class="btn btn-sm">Детали</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

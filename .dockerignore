@@ -1,0 +1,29 @@
+# Данные — монтируются через volume, не копируются в образ
+data/raw/
+data/processed/
+
+# Артефакты
+image/
+reports/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+coverage.xml
+*.egg-info/
+
+# Виртуальное окружение
+.venv/
+venv/
+env/
+
+# IDE и системные файлы
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Git
+.git/
+.github/
