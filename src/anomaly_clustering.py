@@ -25,11 +25,6 @@ class AnomalyTypeClassifier:
     а не точный диагноз: модель только подсказывает, в какую сторону
     смотреть инженеру/аналитику.
     """
-
-    # Признаки, по которым кластеризуем аномалии.
-    # Берутся из anomaly_features_df (cv, zero_ratio, entropy,
-    # peak_factor, load_factor) и meter_profiles_df
-    # (night_day_ratio, large_gap_ratio, max_gap_hours).
     CLUSTER_FEATURES = [
         "cv",
         "zero_ratio",
@@ -41,10 +36,6 @@ class AnomalyTypeClassifier:
         "max_gap_hours",
     ]
 
-    # Правила интерпретации: если у кластера сильнее всего (по z-score)
-    # выделяется признак FEATURE в направлении "high"/"low" — присваиваем LABEL.
-    # Порядок важен: правила проверяются по очереди, побеждает первое совпадение
-    # среди топ-признаков кластера.
     LABEL_RULES = [
         ("large_gap_ratio", "high",
          "Неисправность счетчика / сбои передачи данных"),
@@ -70,10 +61,6 @@ class AnomalyTypeClassifier:
 
     DEFAULT_LABEL = "Нетипичная аномалия (требует ручного разбора)"
 
-    # Признаки, особо склонные к экстремальным выбросам (разрывы
-    # в данных, ночное/дневное соотношение при делении на малые числа).
-    # Их клипуем по перцентилям перед кластеризацией, чтобы 1-2 выброса
-    # не "забивали" всю шкалу после масштабирования.
     WINSORIZE_FEATURES = ["max_gap_hours", "night_day_ratio"]
     WINSORIZE_LOWER_Q = 0.01
     WINSORIZE_UPPER_Q = 0.95
@@ -132,10 +119,6 @@ class AnomalyTypeClassifier:
             merged[col] = merged[col].fillna(0.0)
 
         return merged
-
-    # ------------------------------------------------------------
-    # Подбор числа кластеров (для отчета/анализа)
-    # ------------------------------------------------------------
 
     def suggest_n_clusters(self, X_scaled, k_range=range(2, 7)):
         """
@@ -234,9 +217,6 @@ class AnomalyTypeClassifier:
 
         label_map, cluster_means = self._label_clusters(X_scaled_df, labels)
         data["anomaly_type"] = data["cluster"].map(label_map)
-
-        # для визуализации сохраняем 2D-проекцию (PCA) прямо здесь, чтобы
-        # не пересчитывать масштабирование в визуализаторе
         from sklearn.decomposition import PCA
         pca = PCA(n_components=2, random_state=self.random_state)
         coords = pca.fit_transform(X_scaled)
